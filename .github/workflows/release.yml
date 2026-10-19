@@ -3,18 +3,20 @@ name: "Godot Auto Release (Windows)"
 on:
   push:
     tags:
-      - "v*" # Uruchamia się przy pushowaniu tagów np. v0.1.0, v1.0.0
+      - "v*"
 
 env:
-  GODOT_VERSION: "4.3" # Upewnij się, że wersja odpowiada Twojej wersji Godota
   EXPORT_NAME: "crazy-colors"
 
 jobs:
   export_windows:
     name: "Export & Release Windows"
     runs-on: ubuntu-latest
+    container:
+      # Oficjalny obraz CI z preinstalowanym Godotem 4.3 i szablonami eksportu
+      image: barichello/godot-ci:4.3
     permissions:
-      contents: write # Uprawnienia do tworzenia wydań (Releases)
+      contents: write
 
     steps:
       - name: Checkout repository
@@ -22,17 +24,15 @@ jobs:
         with:
           lfs: true
 
-      - name: Setup Godot Export Environment
-        uses: firebelley/godot-export@v6.0.0
-        with:
-          godot_version: ${{ env.GODOT_VERSION }}
-          godot_channel: "stable"
-          export_debug: false
+      - name: Setup Export Directory
+        run: |
+          mkdir -v -p ~/.local/share/godot/export_templates/
+          mv /root/.local/share/godot/export_templates/* ~/.local/share/godot/export_templates/ 2>/dev/null || true
+          mkdir -v -p build/windows
 
       - name: Export Windows Build
         run: |
-          mkdir -p build/windows
-          godot --headless --export-release "Windows Desktop" build/windows/${{ env.EXPORT_NAME }}.exe
+          godot -v --headless --export-release "Windows Desktop" build/windows/${{ env.EXPORT_NAME }}.exe
           cd build/windows && zip -r ../../${{ env.EXPORT_NAME }}-windows.zip . && cd ../..
 
       - name: Publish GitHub Release

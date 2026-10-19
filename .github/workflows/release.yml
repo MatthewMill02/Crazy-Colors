@@ -1,0 +1,46 @@
+name: "Godot Auto Release (Windows)"
+
+on:
+  push:
+    tags:
+      - "v*" # Uruchamia się przy pushowaniu tagów np. v0.1.0, v1.0.0
+
+env:
+  GODOT_VERSION: "4.3" # Upewnij się, że wersja odpowiada Twojej wersji Godota
+  EXPORT_NAME: "crazy-colors"
+
+jobs:
+  export_windows:
+    name: "Export & Release Windows"
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # Uprawnienia do tworzenia wydań (Releases)
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - name: Setup Godot Export Environment
+        uses: firebelley/godot-export@v6.0.0
+        with:
+          godot_version: ${{ env.GODOT_VERSION }}
+          godot_channel: "stable"
+          export_debug: false
+
+      - name: Export Windows Build
+        run: |
+          mkdir -p build/windows
+          godot --headless --export-release "Windows Desktop" build/windows/${{ env.EXPORT_NAME }}.exe
+          cd build/windows && zip -r ../../${{ env.EXPORT_NAME }}-windows.zip . && cd ../..
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: "Release ${{ github.ref_name }}"
+          draft: false
+          prerelease: false
+          files: |
+            ${{ env.EXPORT_NAME }}-windows.zip
